@@ -2,6 +2,8 @@
 ## JAWS-UG沖縄 Amazon Cognitoハンズオン 2017-10-21
 ---
 
+資料は[こちら](https://www.slideshare.net/secret/rrYCjGV1wSgJec)
+
 注）手順に出てくる`miyaz`の部分は自分の名前に置き換えてください
 
 * マネコンからCognitoを開く
