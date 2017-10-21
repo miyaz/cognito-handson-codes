@@ -2,7 +2,7 @@
 ## JAWS-UG沖縄 Amazon Cognitoハンズオン 2017-10-21
 ---
 
-資料は[こちら](https://www.slideshare.net/secret/rrYCjGV1wSgJec)
+資料は[こちら](https://www.slideshare.net/ShinjiMiyazato/cognito)
 
 注）手順に出てくる`miyaz`の部分は自分の名前に置き換えてください
 
@@ -111,5 +111,6 @@
     * <AppClientId>をアプリクライアントIDに置き換える
     * <BucketName>をバケット名に置き換える
     * myfolder.htmlを開き、アップロード／ダウンロードができることを確認
+
 
 # 完成
