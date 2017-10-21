@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>JAWS-UG Okinawa</title>
+  <!-- aws sdk //-->
+  <script src="js/aws-sdk.min.js"></script>
+  <!-- aws cognito sdk (public beta!!) //-->
+  <script src="js/jsbn.js"></script>
+  <script src="js/jsbn2.js"></script>
+  <script src="js/sjcl.js"></script>
+  <!-- <script src="moment.js"></script> -->
+  <script src="js/aws-cognito-sdk.min.js"></script>
+  <script src="js/amazon-cognito-identity.min.js"></script>
+  <!-- jquery //-->
+  <script src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
+  <!-- bootstrap3 //-->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="container">
+<form class="form-signin">
+  <h2 class="form-signin-heading">アクティベーション</h2>
+  <div id="message" class="alert" style="display:none;"></div>
+  <label for="inputUsername" class="sr-only">ユーザー名</label>
+  <input type="text" id="inputUsername" class="form-control" placeholder="User name" required autofocus></input>
+  <label for="inputKey" class="sr-only">検証コード</label>
+  <input type="password" id="inputKey" class="form-control" placeholder="ActivationKey" required></input>
+  <br/>
+  <input type="button" class="btn btn-lg btn-primary btn-bloc" id="user_add_btn" value="アクティベーション"></input>
+  <div style="margin-top: 20px;"><a href="signin.html">サインイン</a></div>
+</form>
+</div>
+<script>
+<!--
+// Amazon Cognito 認証情報プロバイダーを初期化します
+  AWS.config.region = 'ap-northeast-1'; // リージョン
+  AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+      IdentityPoolId: '<IdentityPoolId>',
+  });
+
+  // Initialize the Amazon Cognito credentials provider
+  AWSCognito.config.region = 'ap-northeast-1'; // Region
+  AWSCognito.config.credentials = new AWS.CognitoIdentityCredentials({
+      IdentityPoolId: '<IdentityPoolId>'
+  });
+
+  var data = { UserPoolId: '<UserPoolId>',
+                ClientId: '<AppClientId>'
+  };
+  var userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(data);
+  var attributeList = [];
+
+  var cognitoUser;
+
+$('#user_add_btn').click(function() {
+  username = $("#inputUsername").val();
+  actkey = $("#inputKey").val();
+  if(!username || !actkey) { return false; }
+
+  var userData = {
+      Username : username,
+      Pool : userPool,
+  };
+  var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+  cognitoUser.confirmRegistration(actkey, true, function(err, result) {
+      if (err) {
+          console.log(err);
+          message_text = err;
+          message_class = "alert-danger";
+      } else {
+          cognitoUser = result.user;
+          console.log('user name is ' + username);
+          message_text = username + "がアクティベートされました";
+          message_class = "alert-success";
+      }    
+      $("#message").text(message_text);
+      $("#message").addClass(message_class);
+      $('#message').show();
+      setTimeout(function() {
+        $('#message').fadeOut();
+        $("#message").removeClass(message_class);
+      }, 5000);
+  });
+});
+//-->
+</script>
+</body>
+</html>

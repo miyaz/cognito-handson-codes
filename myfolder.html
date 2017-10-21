@@ -1,0 +1,345 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<script src="js/aws-sdk.min.js"></script>
+<script src="js/aws-cognito-sdk.min.js"></script>
+<script src="js/amazon-cognito-identity.min.js"></script>
+<script src="js/async.min.js"></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
+
+<script>
+var region = 'ap-northeast-1';
+var s3Bucket = '<BucketName>';
+var websiteUrlBase = 'https://s3-ap-northeast-1.amazonaws.com/' + s3Bucket;
+var bucket;
+var identityId;
+
+$(function() {
+  initAWSCredentials();
+  initEventHandlers();
+});
+
+function initAWSCredentials() {
+    AWS.config.region = 'ap-northeast-1'; // Region
+    AWSCognito.config.region = 'ap-northeast-1'; // Region
+     
+    var data = {
+        UserPoolId: '<UserPoolId>',
+        ClientId: '<AppClientId>'
+    };
+    var userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(data);
+    var cognitoUser = userPool.getCurrentUser();
+
+    if (cognitoUser != null) {
+        cognitoUser.getSession(function(err, sessresult) {
+            if (sessresult) {
+                console.log('You are now logged in.');
+                cognitoUser.getUserAttributes(function(err, attrresult) {
+                    if (err) {
+                        alert(err);
+                        return;
+                    }
+                    var params = {
+                        IdentityPoolId: '<IdentityPoolId>',
+                        Logins: {
+                            'cognito-idp.ap-northeast-1.amazonaws.com/<UserPoolId>': sessresult.getIdToken().getJwtToken()
+                        }
+                    };
+                    // Add the User's Id Token to the Cognito credentials login map.
+                    AWS.config.credentials = new AWS.CognitoIdentityCredentials(params);
+
+
+                    
+                       AWS.config.credentials.get(function (err) {
+                           if (err) console.log(err);
+                           else console.log(AWS.config.credentials);
+                       });
+                    
+
+                    identityId = AWS.config.credentials.identityId;
+                    bucket = new AWS.S3();
+                    updateFileList();
+                });
+            } else {
+               var url = "signin.html";
+               $(location).attr("href", url);
+            }
+        });
+    } else {
+      var url = "signin.html";
+      $(location).attr("href", url);
+    }
+}
+
+function listAllKeys(nextToken, keyList, cb)
+{
+  var keyPrefix = identityId + '/';
+  var s3Params = {
+    Bucket: s3Bucket,
+    Delimiter: '/',
+    EncodingType: 'url',
+    Prefix: keyPrefix
+  };
+  if (nextToken) s3Params['ContinuationToken'] = nextToken;
+  bucket.listObjectsV2(s3Params, function(err, data) {
+    console.log(JSON.stringify(err, null, 2));
+    data.Contents.map((objArray) => {
+      if (objArray.Key.slice(-1) !== '/') {
+        keyList.push(objArray);
+      }
+    });
+    if (data.IsTruncated) listAllKeys(data.NextContinuationToken, keyList, cb);
+    else cb(null, keyList);
+  });
+}
+
+function updateFileList() {
+  startLoading();
+  var inKeyList = [];
+  listAllKeys(null, inKeyList, function(err, outKeyList) {
+    if (err) {
+      console.log(err);
+    } else {
+      objArraySort(outKeyList, 'LastModified', 'desc'); 
+      console.log(JSON.stringify(outKeyList, null, 2));
+
+      $('#fileList').empty();
+      if (outKeyList.length === 0) {
+          $('#fileList').text('No files');
+      } else {
+        var table = $('<table style="border:1px;">').appendTo($('#fileList'));
+        var tr = $('<tr>');
+        $('<th style="width:50%;">').text('ファイル名').appendTo(tr);
+        $('<th style="width:15%;">').text('サイズ').appendTo(tr);
+        $('<th style="width:20%;">').text('登録日時').appendTo(tr);
+        $('<th style="width:5%;">').text('-').appendTo(tr);
+        tr.appendTo(table);
+
+        for (var i = 0; i < outKeyList.length; i++) {
+            var objKey    = outKeyList[i].Key;
+            var fileName  = objKey.split('/').pop();
+            var timeStamp = outKeyList[i].LastModified;
+            var size      = outKeyList[i].Size;
+
+            // subに含まれるコロン(%3A)を事前に:にデコードしないといけない。。ハマりポイント
+            var key       = decodeURI(objKey.replace(/%3A/g, ':'));
+            var s3Params  = {Bucket: s3Bucket, Key: key, Expires: 3600};
+            var url       = bucket.getSignedUrl('getObject', s3Params);
+
+            tr = $('<tr>')
+            tr.appendTo(table);
+            var get_link = $('<a>').attr('href', url).text(decodeURI(fileName));
+            $('<td>').append(get_link).appendTo(tr);
+            $('<td>').append(size).appendTo(tr);
+            $('<td>').append(datetime_str(timeStamp)).appendTo(tr);
+            var del_btn = $('<button class="delBtn">').data('key', key).text('削除');
+            $('<td>').append(del_btn).appendTo(tr);
+        }
+        // 削除ボタンで消えるClickアクション登録
+        $('.delBtn').on('click',function(e){
+            deleteFile($(this).data('key'));
+            return false;
+        });
+      }
+    }
+  });
+  setTimeout(function() {
+    stopLoading();
+  }, 500);
+}
+
+function datetime_str(dateStr) {
+  date = new Date(dateStr);
+  var format = 'YYYY/MM/DD hh:mm:ss';
+  format = format.replace(/YYYY/g, date.getFullYear());
+  format = format.replace(/MM/g, ('0' + (date.getMonth() + 1)).slice(-2));
+  format = format.replace(/DD/g, ('0' + date.getDate()).slice(-2));
+  format = format.replace(/hh/g, ('0' + date.getHours()).slice(-2));
+  format = format.replace(/mm/g, ('0' + date.getMinutes()).slice(-2));
+  format = format.replace(/ss/g, ('0' + date.getSeconds()).slice(-2));
+  return format;
+}
+
+// 画像登録日時順にソート
+function objArraySort(ary, key, order) {
+    var reverse = 1;
+    if(order && order.toLowerCase() == "desc") 
+        reverse = -1;
+    ary.sort(function(a, b) {
+        if(a[key] < b[key])
+            return -1 * reverse;
+        else if(a[key] == b[key])
+            return 0;
+        else
+            return 1 * reverse;
+    });
+}
+
+function initEventHandlers() {
+  function dragEnter(e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+
+  function dragOver(e) {
+    $(this).addClass('over');
+    e.stopPropagation();
+    e.preventDefault();
+  }
+
+  function dragLeave(e) {
+    $(this).removeClass('over');
+    e.stopPropagation();
+    e.preventDefault();
+  }
+
+  function drop(e) {
+    $(this).removeClass('over');
+    e.stopPropagation();
+    e.preventDefault();
+    if (e.originalEvent.dataTransfer) {
+      var dt = e.originalEvent.dataTransfer;
+      var files = dt.files;
+      uploadFiles(files);
+    }
+  }
+  var dropbox = $("#fileList");
+  dropbox.on("dragenter", dragEnter);
+  dropbox.on("dragover", dragOver);
+  dropbox.on("dragleave", dragLeave);
+  dropbox.on("drop", drop);
+
+  var fileSelect = $('#fileSelect');
+  fileSelect.on('change', function(e) {
+    uploadFiles(this.files);
+  });
+}
+
+function uploadFiles(files) {
+  if (files && files.length > 0) {
+    startLoading();
+    async.forEach(files, function(file, cb) {
+      var key = `${identityId}/${del_sym(file.name)}`;
+      console.log(`uploading bucket:${s3Bucket}, key:${key}`);
+      var params = {
+        Bucket: s3Bucket,
+        Key: key,
+        ContentType: file.type,
+        Body: file,
+      };
+      bucket.putObject(params, cb);
+    }, function(err) {
+      $('#fileSelect').val('');
+      if (err) {
+        stopLoading();
+        alert(err.message);
+        throw err;
+      }
+      setTimeout(function() {
+        updateFileList();
+      }, 1000);
+    });
+  }
+}
+
+function deleteFile(key) {
+  startLoading();
+  var params = {
+      Bucket: s3Bucket,
+      Key: key
+  };
+  bucket.deleteObject(params, function(err, data) {
+    if (err) {
+      stopLoading();
+      alert(err.message);
+      throw err;
+    }
+    setTimeout(function() {
+      updateFileList();
+    }, 1000);
+  });
+}
+
+function del_sym(str) {
+  str = str.replace(/ /g, '');
+  str = str.replace(/@/g, 'a');
+  return str;
+}
+
+function startLoading() {
+  $('#loading').show();
+}
+
+function stopLoading() {
+  $('#loading').hide();
+}
+</script>
+<style>
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+}
+table, th, td {
+  border-collapse: collapse;
+  border:1px solid #333;
+}
+#fileSelectArea {
+  margin: 5px 0;
+  padding: 0;
+  font-weight: bold;
+}
+#fileList {
+  min-height: 300px;
+  border: 5px solid #fff;
+  box-sizing: border-box;
+  overflow: auto;
+}
+#fileList.over {
+  border: 5px dashed #aaa;
+}
+#fileList table {
+    /*width: 70%;*/
+  width: 800px;
+  font-size: 12px;
+}
+#fileList table tr {
+  border-bottom: 1px solid #ccc;
+}
+#fileList table tr.header {
+  background-color: #eee;
+}
+#loading {
+  display: none;
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 200px;
+}
+textarea{font-size:large;}
+</style>
+</head>
+<body>
+  <h2>JAWS-UG クラウドストレージサービス (D&D対応)</h2>
+  <div id="fileSelectArea">Select Uploading Files:
+  <input id="fileSelect" type="file" multiple="multiple" />
+  <input id="fileReload" type="button" value="reload" onclick="updateFileList();" />
+  </div>
+  <div id="fileList"></div>
+  <div id="loading">Loading ...</div>
+  <div style="margin-top: 20px;">
+    <!-- <a href="signin.html">別ユーザでサインイン</a><br> -->
+    <a href="mypage.html">マイページ</a>
+  </div>
+</body>
+</html>

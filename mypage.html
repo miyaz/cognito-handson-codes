@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html >
+  <head>
+    <meta charset="UTF-8">
+    <title>mypage</title>
+    <link rel="stylesheet" href="https://codepen.io/Lewitje/pen/BNNJjo.css">
+  </head>
+  <body>
+    <div class="wrapper">
+        <div class="container">
+     <!-- <div class="mypage"> -->
+     <h1>mypage</h1>
+        <div id="username">Username: XXXXX</div>
+        <div id="email">EMail: XXXXX</div>
+        <div id="sub">Sub: XXXXX</div>
+        <form class="form">
+            <button type="submit" id="folder-button">マイフォルダ</button><br><br>
+            <button type="submit" id="logout-button">ログアウト</button>
+        </form>
+    </div>
+ 
+    <ul class="bg-bubbles">
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+    </ul>
+</div>
+<!-- aws cognito sdk  //-->
+    <script src="js/jsbn.js"></script>
+    <script src="js/jsbn2.js"></script>
+    <script src="js/sjcl.js"></script>
+    <script src="js/aws-sdk.min.js"></script>
+    <script src="js/aws-cognito-sdk.min.js"></script>
+    <script src="js/amazon-cognito-identity.min.js"></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
+
+    <script type="text/javascript">
+    AWS.config.region = 'ap-northeast-1'; // Region
+    AWSCognito.config.region = 'ap-northeast-1'; // Region
+     
+    var data = { UserPoolId: '<UserPoolId>',
+                  ClientId: '<AppClientId>'
+    };
+    var userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(data);
+    var cognitoUser = userPool.getCurrentUser();
+
+    if (cognitoUser != null) {
+        cognitoUser.getSession(function(err, sessresult) {
+            if (sessresult) {
+                console.log('You are now logged in.');
+                cognitoUser.getUserAttributes(function(err, attrresult) {
+                    if (err) {
+                        alert(err);
+                        return;
+                    }
+                    $("#username").html("Username: " + cognitoUser.username);
+     
+                    for (i = 0; i < attrresult.length; i++) {
+                        if (attrresult[i].getName()=="email"){
+                          $("#email").html("EMail: " + attrresult[i].getValue());
+                        }
+                    }
+
+                    var params = {
+                        IdentityPoolId: '<IdentityPoolId>',
+                        Logins: {
+                            'cognito-idp.ap-northeast-1.amazonaws.com/<UserPoolId>': sessresult.getIdToken().getJwtToken()
+                        }
+                    };
+                    // Add the User's Id Token to the Cognito credentials login map.
+                    AWS.config.credentials = new AWS.CognitoIdentityCredentials(params);
+                    AWS.config.credentials.get(function(err) {
+                      if (!err) {
+                        console.log("Cognito Identity Id: " + AWS.config.credentials.identityId);
+                        var identityId = AWS.config.credentials.identityId;
+                        $("#sub").html(`Sub   : ${identityId}`);
+                      }
+                    });
+                });
+            } else {
+               var url = "signin.html";
+               $(location).attr("href", url);
+            }
+        });
+    } else {
+      var url = "signin.html";
+      $(location).attr("href", url);
+    }
+    $("#logout-button").click(function(event){ 
+        event.preventDefault();
+        if (cognitoUser != null) {
+          cognitoUser.signOut();
+          AWS.config.credentials.clearCachedId();
+        }
+        var url = "signin.html";
+        $(location).attr("href", url);
+    });
+    $("#folder-button").click(function(event){ 
+        event.preventDefault();
+        var url = "myfolder.html";
+        $(location).attr("href", url);
+    });
+    </script>
+  </body>
+</html>
