@@ -30,17 +30,17 @@
 
 * サインアップページ／アクティベーションページ作成
   * signup.html/activation.html修正
-    * <IdentityPoolId>をIDプールIDに置き換える
-    * <UserPoolId>をユーザプールIDに置き換えるÂ
-    * <AppClientId>をアプリクライアントIDに置き換える
+    * `<IdentityPoolId>`をIDプールIDに置き換える
+    * `<UserPoolId>`をユーザプールIDに置き換えるÂ
+    * `<AppClientId>`をアプリクライアントIDに置き換える
   * signup.htmlを開き、必要情報入力してサインアップ
     * メールに検証コードが届くのでactivation.htmlを開きユーザをアクティベート
 
 * サインイン／マイページ作成
   * signup.html/activation.html修正
-    * <IdentityPoolId>をIDプールIDに置き換える
-    * <UserPoolId>をユーザプールIDに置き換える
-    * <AppClientId>をアプリクライアントIDに置き換える
+    * `<IdentityPoolId>`をIDプールIDに置き換える
+    * `<UserPoolId>`をユーザプールIDに置き換える
+    * `<AppClientId>`をアプリクライアントIDに置き換える
   * signin.htmlを開き、必要情報入力してサインインし、マイページが表示されることを確認
 
 * マイフォルダページ作成
@@ -59,7 +59,7 @@
 </CORSConfiguration>
 ```
   * 認証されたロール{Cognito_idpool_miyazAuth_Role}にS3アクセス権付与
-    * <BucketName>を作成したバケット名に置き換える
+    * `<BucketName>`を作成したバケット名に置き換える
 ```
 {
     "Version": "2012-10-17",
@@ -106,10 +106,10 @@
 }
 ```
   * myfolder.html修正
-    * <IdentityPoolId>をIDプールIDに置き換える
-    * <UserPoolId>をユーザプールIDに置き換える
-    * <AppClientId>をアプリクライアントIDに置き換える
-    * <BucketName>をバケット名に置き換える
+    * `<IdentityPoolId>`をIDプールIDに置き換える
+    * `<UserPoolId>`をユーザプールIDに置き換える
+    * `<AppClientId>`をアプリクライアントIDに置き換える
+    * `<BucketName>`をバケット名に置き換える
     * myfolder.htmlを開き、アップロード／ダウンロードができることを確認
 
 
