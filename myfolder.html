@@ -128,7 +128,7 @@ function updateFileList() {
 
             tr = $('<tr>')
             tr.appendTo(table);
-            var get_link = $('<a>').attr('href', url).text(decodeURI(fileName));
+            var get_link = $('<a>').attr('href', url).attr('target', '_blank').text(decodeURI(fileName));
             $('<td>').append(get_link).appendTo(tr);
             $('<td>').append(size).appendTo(tr);
             $('<td>').append(datetime_str(timeStamp)).appendTo(tr);
